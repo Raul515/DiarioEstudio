@@ -35,6 +35,18 @@
     </header>
 
     <main>
+        <section class="heatmap-section">
+            <h2>Mapa de estudio</h2>
+            <div id="heatmap-wrapper">
+                <div class="heatmap-scroll-container">
+                    <div id="heatmap-grid" class="heatmap-grid">
+                        <!-- Celdas generadas dinámicamente -->
+                    </div>
+                </div>
+                <div id="heatmap-info" class="heatmap-info">Cargando actividad...</div>
+            </div>
+        </section>
+
         <section class="add-session">
             <h2>Registrar sesión</h2>
             <form id="session-form">
@@ -62,6 +74,7 @@
         </section>
     </main>
 
+    <script src="heatmap.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

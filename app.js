@@ -7,6 +7,8 @@ const sessionsContainer = document.getElementById('sessions-container');
 const streakCount = document.getElementById('streak-count');
 const bestStreakCount = document.getElementById('best-streak-count');
 const monthDaysCount = document.getElementById('month-days-count');
+const heatmapGrid = document.getElementById('heatmap-grid');
+const heatmapInfo = document.getElementById('heatmap-info');
 
 // Claves de almacenamiento (clave oficial de AGENTS.md y compatibilidad con versiones previas)
 const STORAGE_KEY = 'diario-estudio-sesiones';
@@ -23,6 +25,9 @@ function init() {
 
     // Cargar sesiones guardadas
     loadData();
+
+    // Configurar eventos interactivos del mapa
+    setupHeatmapEvents();
 
     // Renderizar la interfaz
     updateUI();
@@ -53,6 +58,101 @@ form.addEventListener('submit', function (e) {
 function updateUI() {
     renderSessions();
     renderStreaks();
+    renderHeatmap();
+}
+
+// Renderizar el mapa de calor de 12 semanas
+function renderHeatmap() {
+    if (!heatmapGrid || !heatmapInfo) return;
+
+    heatmapGrid.innerHTML = '';
+    const today = new Date();
+    // generateHeatmapData proviene de heatmap.js
+    const cells = typeof generateHeatmapData === 'function' ? generateHeatmapData(sessions, today) : [];
+
+    const todayStr = formatDate(today);
+    const todayCell = cells.find(c => c.dateStr === todayStr);
+    const defaultText = todayCell
+        ? `Hoy (${todayCell.displayDate}): ${todayCell.minutes} minutos`
+        : 'Hoy: 0 minutos';
+
+    heatmapInfo.textContent = defaultText;
+
+    cells.forEach(cell => {
+        const div = document.createElement('div');
+        div.className = `heatmap-cell level-${cell.level}`;
+        if (cell.isFuture) {
+            div.classList.add('hidden-future');
+        } else {
+            div.dataset.date = cell.dateStr;
+            div.dataset.display = cell.displayDate;
+            div.dataset.minutes = cell.minutes;
+            div.setAttribute('role', 'gridcell');
+            div.setAttribute('aria-label', `${cell.displayDate}: ${cell.minutes} minutos`);
+            div.tabIndex = 0;
+        }
+        heatmapGrid.appendChild(div);
+    });
+}
+
+// Configurar delegación de eventos para el detalle informativo del mapa
+function setupHeatmapEvents() {
+    if (!heatmapGrid || !heatmapInfo) return;
+
+    function showCellDetail(cell) {
+        if (!cell || cell.classList.contains('hidden-future')) return;
+        const display = cell.dataset.display;
+        const minutes = cell.dataset.minutes;
+        if (display && minutes !== undefined) {
+            heatmapInfo.textContent = `${display}: ${minutes} minutos`;
+        }
+    }
+
+    function resetToToday() {
+        const today = new Date();
+        const todayStr = formatDate(today);
+        const cell = heatmapGrid.querySelector(`[data-date="${todayStr}"]`);
+        if (cell) {
+            heatmapInfo.textContent = `Hoy (${cell.dataset.display}): ${cell.dataset.minutes} minutos`;
+        } else {
+            heatmapInfo.textContent = 'Hoy: 0 minutos';
+        }
+    }
+
+    // Interacción con ratón o táctil
+    heatmapGrid.addEventListener('pointerover', (e) => {
+        const cell = e.target.closest('.heatmap-cell:not(.hidden-future)');
+        if (cell) {
+            showCellDetail(cell);
+        }
+    });
+
+    heatmapGrid.addEventListener('pointerout', (e) => {
+        if (!e.relatedTarget || !heatmapGrid.contains(e.relatedTarget)) {
+            resetToToday();
+        }
+    });
+
+    heatmapGrid.addEventListener('click', (e) => {
+        const cell = e.target.closest('.heatmap-cell:not(.hidden-future)');
+        if (cell) {
+            showCellDetail(cell);
+        }
+    });
+
+    // Accesibilidad por teclado
+    heatmapGrid.addEventListener('focusin', (e) => {
+        const cell = e.target.closest('.heatmap-cell:not(.hidden-future)');
+        if (cell) {
+            showCellDetail(cell);
+        }
+    });
+
+    heatmapGrid.addEventListener('focusout', (e) => {
+        if (!e.relatedTarget || !heatmapGrid.contains(e.relatedTarget)) {
+            resetToToday();
+        }
+    });
 }
 
 // Pintar la lista de sesiones
