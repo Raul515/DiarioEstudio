@@ -11,6 +11,7 @@ programar.
 - Textos de la interfaz en español.
 - Código simple, nombres descriptivos y comentarios solo donde aporten.
 - Diseño limpio y responsive; cualquier pantalla nueva debe verse bien en el móvil.
+- Commits atómicos separados por tipo (`feat(ui)`, `feat(logic)`, `style`, `docs`, `test`, `chore`). Mensajes claros y descriptivos en español.
 ## Datos
 - localStorage, clave `diario-estudio-sesiones`: array de `{ date: "AAAA-MM-DD", topic,
 minutes }`.
@@ -33,7 +34,8 @@ pero ayer sí, la racha sigue viva y se cuenta desde ayer.
 - 🚫 Nunca: añadir dependencias, frameworks o un paso de build.
 - ✅ Siempre: actualizar `MEMORY.md` al terminar cada tarea. 
 ## Verificación
-- No hay tests ni lint. Probar abriendo `index.html` en el navegador.
+- No hay tests automáticos. Después de cada cambio, verifica con el MCP de Chrome
+DevTools: abre `index.html`, prueba la funcionalidad, revisa la consola y comprueba la vista móvil.
 - Para empezar de cero: DevTools → Application → Local Storage → borrar la clave
 `diario-estudio-sesiones`. 
 ## Memoria
@@ -45,3 +47,7 @@ porqué) y errores a evitar.
 - Si algo se convierte en una regla permanente, propón moverlo a `AGENTS.md` en lugar de
 dejarlo en la memoria.
 - No guardes nunca datos sensibles (claves, tokens, datos personales).
+## Comandos
+- Tests: `node --test`
+## Reglas
+- Lee `docs/constitution.md` y la spec activa (`specs/NNN-*/`) antes de tocar código.
