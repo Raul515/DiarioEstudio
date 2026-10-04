@@ -6,6 +6,7 @@ const minutesInput = document.getElementById('minutes');
 const sessionsContainer = document.getElementById('sessions-container');
 const streakCount = document.getElementById('streak-count');
 const bestStreakCount = document.getElementById('best-streak-count');
+const monthDaysCount = document.getElementById('month-days-count');
 
 // Claves de almacenamiento (clave oficial de AGENTS.md y compatibilidad con versiones previas)
 const STORAGE_KEY = 'diario-estudio-sesiones';
@@ -94,11 +95,33 @@ function renderSessions() {
     });
 }
 
-// Calcular y mostrar racha actual y mejor racha
+// Calcular y mostrar racha actual, mejor racha y días estudiados este mes
 function renderStreaks() {
     const { current, best } = calculateStreaks();
     streakCount.textContent = current;
     bestStreakCount.textContent = best;
+    monthDaysCount.textContent = calculateMonthDays();
+}
+
+// Calcular días únicos estudiados en el mes local actual (excluyendo fechas futuras)
+function calculateMonthDays() {
+    if (sessions.length === 0) {
+        return 0;
+    }
+
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const monthPrefix = `${year}-${month}-`;
+    const todayStr = formatDate(today);
+
+    const uniqueMonthDays = new Set(
+        sessions
+            .filter(session => typeof session.date === 'string' && session.date.startsWith(monthPrefix) && session.date <= todayStr)
+            .map(session => session.date)
+    );
+
+    return uniqueMonthDays.size;
 }
 
 // Lógica de cálculo de rachas
