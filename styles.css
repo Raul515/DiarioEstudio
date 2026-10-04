@@ -37,9 +37,9 @@ h1 {
 
 .streaks-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 1rem;
-    max-width: 440px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    max-width: 100%;
     margin: 0 auto;
 }
 
