@@ -12,6 +12,7 @@ programar.
 - Código simple, nombres descriptivos y comentarios solo donde aporten.
 - Diseño limpio y responsive; cualquier pantalla nueva debe verse bien en el móvil.
 - Commits atómicos separados por tipo (`feat(ui)`, `feat(logic)`, `style`, `docs`, `test`, `chore`). Mensajes claros y descriptivos en español.
+- Al subir cambios a git, asegurarse siempre de que no haya ninguna información secreta o sensible (claves, tokens, credenciales, datos personales). Si es el caso, debe incluirse en un archivo `.gitignore` y no subirse nunca, como por ejemplo ficheros de variables de entorno (`.env`, `.env.local`), claves privadas o credenciales.
 ## Datos
 - localStorage, clave `diario-estudio-sesiones`: array de `{ date: "AAAA-MM-DD", topic,
 minutes }`.
