@@ -2,22 +2,22 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- v1.2 funcionando: registrar sesiones, historial ordenado y visualización triple de racha actual (🔥), mejor racha histórica (🏆) y días estudiados en el mes en curso (📅).
-- Creada la constitución del proyecto en `docs/constitution.md` con sus 6 principios innegociables.
-- Convención de commits atómicos por tipo añadida a `AGENTS.md`.
-- Datos en localStorage (clave `diario-estudio-sesiones`, con retrocompatibilidad).
-- Skill local activada: `.agents/skills/local-dates/` para manejo riguroso de fechas locales.
+- v1.3 funcionando: mapa de calor de 12 semanas (estilo GitHub, lunes a domingo, 5 niveles de intensidad y panel informativo unificado para móvil/escritorio).
+- Sistema de registro de sesiones, historial ordenado y métricas triples de rachas (actual, mejor, este mes).
+- Constitución (`docs/constitution.md`), spec funcional (`specs/001-heat-map/spec.md`) y plan completado.
+- 13 tests unitarios nativos pasando en verde con `node --test`.
 
 ## Decisiones (y por qué)
 - Constitución establecida en `docs/constitution.md`: simplicidad primero, la spec manda, funciones puras aisladas del DOM/storage con parámetro "hoy", tests nativos con `node --test`, respeto absoluto de datos/fechas locales e idioma (código en inglés, interfaz/docs en español).
-- Sin backend ni dependencias: cualquiera debe poder abrirlo con doble clic (`file://`).
-- Fecha editable en el formulario: permite registrar días pasados y ver la racha crecer.
-- Cálculo dinámico de la mejor racha: se calcula a partir de las sesiones guardadas en vez de guardar un valor independiente, evitando inconsistencias si se modifican datos en el futuro.
-- Manejo de fechas a las 12:00 local: al crear objetos `Date` intermedios para sumar/restar días, fijar las 12:00 evita saltos por cambios de horario estacional (DST).
+- `heatmap.js` para lógica pura: desacoplado del DOM con exportación condicional para Node (`node --test`), permitiendo pruebas unitarias deterministas sin romper la ejecución directa con doble clic (`file://`).
+- CSS Grid con `grid-auto-flow: column; grid-template-rows: repeat(7, 18px);`: organiza limpiamente 12 columnas x 7 filas.
+- Días futuros de la semana en curso con `visibility: hidden`: preserva la alineación vertical de los días sin renderizar fechas inexistentes ni romper la proporción de la cuadrícula.
+- Panel informativo fijo contiguo: evita popups o tooltips flotantes que fallan en pantallas táctiles.
 
 ## Aprendizajes y errores a evitar
 - Nunca usar `toISOString()` ni `new Date("AAAA-MM-DD")` porque usan UTC y desfasan el día. Usar siempre componentes locales (`getFullYear()`, etc.).
+- Manejo de fechas intermedias a las 12:00 local para evitar saltos por cambios estacionales (DST).
 
 ## Próximos pasos y notas técnicas
-- Pruebas E2E realizadas con Chrome DevTools: registro de 3 sesiones consecutivas (hoy, ayer, anteayer), validación de racha (3), mejor racha (3) y vista móvil (375 px) sin errores en consola.
-- El servidor `chrome-devtools-mcp` (v1.10.1) funciona directamente vía `npx` y lanza la instancia local de Chrome (`C:\Program Files\Google\Chrome\Application\chrome.exe`).
+- Mapa de calor completamente verificado en móvil (375 px) y escritorio con Chrome DevTools MCP.
+- Todas las tareas de `specs/001-heat-map/tasks.md` marcadas como completadas.
