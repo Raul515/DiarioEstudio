@@ -35,6 +35,39 @@
     </header>
 
     <main>
+        <section id="weekly-goal-card" class="weekly-goal-section">
+            <div class="goal-header">
+                <div class="goal-title-wrap">
+                    <span class="goal-icon">🎯</span>
+                    <h2>Objetivo semanal</h2>
+                </div>
+                <button type="button" id="goal-edit-btn" class="goal-btn-secondary" aria-label="Editar objetivo">Editar</button>
+            </div>
+
+            <div id="goal-display" class="goal-display">
+                <div class="goal-stats">
+                    <span id="goal-current-text" class="goal-highlight">0 min</span>
+                    <span class="goal-separator">/</span>
+                    <span id="goal-target-text">300 min</span>
+                    <span id="goal-percentage-badge" class="goal-percentage-badge">0%</span>
+                </div>
+                <div class="goal-progress-bar" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                    <div id="goal-progress-fill" class="goal-progress-fill" style="width: 0%;"></div>
+                </div>
+                <p id="goal-status-message" class="goal-status-message">Te faltan 300 min para cumplir tu objetivo.</p>
+            </div>
+
+            <form id="goal-edit-form" class="goal-edit-form" style="display: none;">
+                <label for="goal-input">Minutos por semana (1 a 10080):</label>
+                <div class="goal-form-controls">
+                    <input type="number" id="goal-input" min="1" max="10080" step="1" required>
+                    <button type="submit" id="goal-save-btn" class="goal-btn-primary">Guardar</button>
+                    <button type="button" id="goal-cancel-btn" class="goal-btn-secondary">Cancelar</button>
+                </div>
+                <p id="goal-error-msg" class="goal-error-msg" style="display: none;"></p>
+            </form>
+        </section>
+
         <section class="heatmap-section">
             <h2>Mapa de estudio</h2>
             <div id="heatmap-wrapper">
@@ -74,6 +107,7 @@
         </section>
     </main>
 
+    <script src="goal.js"></script>
     <script src="heatmap.js"></script>
     <script src="app.js"></script>
 </body>

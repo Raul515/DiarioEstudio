@@ -10,12 +10,29 @@ const monthDaysCount = document.getElementById('month-days-count');
 const heatmapGrid = document.getElementById('heatmap-grid');
 const heatmapInfo = document.getElementById('heatmap-info');
 
+// Elementos del objetivo semanal
+const weeklyGoalCard = document.getElementById('weekly-goal-card');
+const goalEditBtn = document.getElementById('goal-edit-btn');
+const goalDisplay = document.getElementById('goal-display');
+const goalCurrentText = document.getElementById('goal-current-text');
+const goalTargetText = document.getElementById('goal-target-text');
+const goalPercentageBadge = document.getElementById('goal-percentage-badge');
+const goalProgressFill = document.getElementById('goal-progress-fill');
+const goalProgressBar = document.querySelector('.goal-progress-bar');
+const goalStatusMessage = document.getElementById('goal-status-message');
+const goalEditForm = document.getElementById('goal-edit-form');
+const goalInput = document.getElementById('goal-input');
+const goalCancelBtn = document.getElementById('goal-cancel-btn');
+const goalErrorMsg = document.getElementById('goal-error-msg');
+
 // Claves de almacenamiento (clave oficial de AGENTS.md y compatibilidad con versiones previas)
 const STORAGE_KEY = 'diario-estudio-sesiones';
 const LEGACY_STORAGE_KEY = 'diario_estudio_sessions';
+const STORAGE_KEY_GOAL = 'diario-estudio-meta-semanal';
 
 // Estado de la aplicación
 let sessions = [];
+let weeklyGoalMinutes = 300;
 
 // Inicialización de la aplicación
 function init() {
@@ -23,11 +40,13 @@ function init() {
     const today = new Date();
     dateInput.value = formatDate(today);
 
-    // Cargar sesiones guardadas
+    // Cargar sesiones guardadas y meta semanal
     loadData();
+    loadGoal();
 
-    // Configurar eventos interactivos del mapa
+    // Configurar eventos interactivos
     setupHeatmapEvents();
+    setupGoalEvents();
 
     // Renderizar la interfaz
     updateUI();
@@ -58,6 +77,7 @@ form.addEventListener('submit', function (e) {
 function updateUI() {
     renderSessions();
     renderStreaks();
+    renderWeeklyGoal();
     renderHeatmap();
 }
 
@@ -347,6 +367,116 @@ function escapeHTML(str) {
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+}
+
+// Cargar objetivo semanal de localStorage
+function loadGoal() {
+    const raw = localStorage.getItem(STORAGE_KEY_GOAL);
+    if (raw !== null) {
+        const num = Number(raw);
+        if (Number.isInteger(num) && num > 0 && num <= 10080) {
+            weeklyGoalMinutes = num;
+            return;
+        }
+    }
+    weeklyGoalMinutes = (typeof DEFAULT_WEEKLY_GOAL_MINUTES === 'number') ? DEFAULT_WEEKLY_GOAL_MINUTES : 300;
+}
+
+// Guardar objetivo semanal en localStorage
+function saveGoal(minutes) {
+    weeklyGoalMinutes = minutes;
+    localStorage.setItem(STORAGE_KEY_GOAL, minutes.toString());
+}
+
+// Renderizar la tarjeta del objetivo semanal
+function renderWeeklyGoal() {
+    if (!weeklyGoalCard) return;
+
+    const today = new Date();
+    const progress = (typeof calculateWeeklyProgress === 'function')
+        ? calculateWeeklyProgress(sessions, weeklyGoalMinutes, today)
+        : { currentMinutes: 0, goalMinutes: weeklyGoalMinutes, percentage: 0, isCompleted: false, remainingMinutes: weeklyGoalMinutes, extraMinutes: 0 };
+
+    if (goalCurrentText) goalCurrentText.textContent = `${progress.currentMinutes} min`;
+    if (goalTargetText) goalTargetText.textContent = `${progress.goalMinutes} min`;
+    if (goalPercentageBadge) goalPercentageBadge.textContent = `${progress.percentage}%`;
+
+    const clampedPercentage = Math.min(100, Math.max(0, progress.percentage));
+    if (goalProgressFill) {
+        goalProgressFill.style.width = `${clampedPercentage}%`;
+    }
+    if (goalProgressBar) {
+        goalProgressBar.setAttribute('aria-valuenow', progress.percentage);
+    }
+
+    if (progress.isCompleted) {
+        weeklyGoalCard.classList.add('goal-completed');
+        if (goalStatusMessage) {
+            if (progress.extraMinutes > 0) {
+                goalStatusMessage.textContent = `¡Objetivo cumplido! Has superado tu meta por ${progress.extraMinutes} min.`;
+            } else {
+                goalStatusMessage.textContent = '¡Enhorabuena! Has alcanzado exactamente tu objetivo semanal.';
+            }
+        }
+    } else {
+        weeklyGoalCard.classList.remove('goal-completed');
+        if (goalStatusMessage) {
+            goalStatusMessage.textContent = `Te faltan ${progress.remainingMinutes} min para cumplir tu objetivo.`;
+        }
+    }
+}
+
+// Configurar eventos de edición del objetivo semanal
+function setupGoalEvents() {
+    if (!goalEditBtn || !goalEditForm) return;
+
+    goalEditBtn.addEventListener('click', () => {
+        if (goalInput) goalInput.value = weeklyGoalMinutes;
+        if (goalErrorMsg) {
+            goalErrorMsg.style.display = 'none';
+            goalErrorMsg.textContent = '';
+        }
+        if (goalDisplay) goalDisplay.style.display = 'none';
+        goalEditBtn.style.display = 'none';
+        goalEditForm.style.display = 'block';
+        if (goalInput) {
+            goalInput.focus();
+            goalInput.select();
+        }
+    });
+
+    if (goalCancelBtn) {
+        goalCancelBtn.addEventListener('click', () => {
+            goalEditForm.style.display = 'none';
+            if (goalDisplay) goalDisplay.style.display = 'block';
+            goalEditBtn.style.display = 'inline-block';
+            if (goalErrorMsg) goalErrorMsg.style.display = 'none';
+        });
+    }
+
+    goalEditForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rawValue = goalInput ? goalInput.value : '';
+        const validation = (typeof validateGoalInput === 'function')
+            ? validateGoalInput(rawValue)
+            : { valid: Number.isInteger(Number(rawValue)) && Number(rawValue) > 0, minutes: Number(rawValue), error: 'Número no válido' };
+
+        if (!validation.valid) {
+            if (goalErrorMsg) {
+                goalErrorMsg.textContent = validation.error;
+                goalErrorMsg.style.display = 'block';
+            }
+            return;
+        }
+
+        saveGoal(validation.minutes);
+        renderWeeklyGoal();
+
+        goalEditForm.style.display = 'none';
+        if (goalDisplay) goalDisplay.style.display = 'block';
+        goalEditBtn.style.display = 'inline-block';
+        if (goalErrorMsg) goalErrorMsg.style.display = 'none';
+    });
 }
 
 // Arrancar
