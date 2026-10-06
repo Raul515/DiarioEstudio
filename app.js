@@ -47,6 +47,7 @@ function init() {
     // Configurar eventos interactivos
     setupHeatmapEvents();
     setupGoalEvents();
+    setupSessionEvents();
 
     // Renderizar la interfaz
     updateUI();
@@ -195,6 +196,7 @@ function renderSessions() {
     sortedSessions.forEach(session => {
         const li = document.createElement('li');
         li.className = 'session-item';
+        li.dataset.id = session.id;
 
         // Formatear la fecha para mostrar en formato legible DD/MM/AAAA
         const [year, month, day] = session.date.split('-');
@@ -208,6 +210,10 @@ function renderSessions() {
             </div>
             <div class="session-minutes">
                 ${session.minutes} min
+            </div>
+            <div class="session-actions">
+                <button type="button" class="action-btn edit-btn" data-id="${session.id}" title="Editar sesión" aria-label="Editar sesión">✏️</button>
+                <button type="button" class="action-btn delete-btn" data-id="${session.id}" title="Eliminar sesión" aria-label="Eliminar sesión">🗑️</button>
             </div>
         `;
 
@@ -322,12 +328,23 @@ function loadData() {
         try {
             const parsed = JSON.parse(raw);
             if (Array.isArray(parsed)) {
-                sessions = parsed.map(item => ({
-                    id: item.id || Date.now().toString() + Math.random().toString(36).substring(2, 6),
-                    date: item.date,
-                    topic: item.topic || item.subject || '',
-                    minutes: Number(item.minutes) || 0
-                }));
+                let needsSave = false;
+                sessions = parsed.map((item, index) => {
+                    let id = item.id;
+                    if (!id) {
+                        id = (Date.now() + index).toString() + Math.random().toString(36).substring(2, 6);
+                        needsSave = true;
+                    }
+                    return {
+                        id,
+                        date: item.date,
+                        topic: item.topic || item.subject || '',
+                        minutes: Number(item.minutes) || 0
+                    };
+                });
+                if (needsSave) {
+                    saveData();
+                }
             }
         } catch (e) {
             console.error('Error al cargar datos:', e);
@@ -479,5 +496,102 @@ function setupGoalEvents() {
     });
 }
 
+// Configurar eventos de interacción para editar y eliminar sesiones
+function setupSessionEvents() {
+    if (!sessionsContainer) return;
+
+    // Delegación de clics en la lista de sesiones
+    sessionsContainer.addEventListener('click', (e) => {
+        // Eliminar sesión
+        const deleteBtn = e.target.closest('.delete-btn');
+        if (deleteBtn) {
+            const id = deleteBtn.dataset.id;
+            const session = sessions.find(s => s.id === id);
+            const topicName = session ? (session.topic || 'esta sesión') : 'esta sesión';
+            if (confirm(`¿Estás seguro de que deseas eliminar la sesión "${topicName}"?`)) {
+                sessions = sessions.filter(s => s.id !== id);
+                saveData();
+                updateUI();
+            }
+            return;
+        }
+
+        // Entrar en modo edición
+        const editBtn = e.target.closest('.edit-btn');
+        if (editBtn) {
+            const id = editBtn.dataset.id;
+            const session = sessions.find(s => s.id === id);
+            if (!session) return;
+
+            const li = editBtn.closest('.session-item');
+            if (!li) return;
+
+            const topicText = session.topic || session.subject || '';
+
+            li.innerHTML = `
+                <form class="inline-edit-form" data-id="${session.id}">
+                    <input type="text" name="topic" id="edit-topic-${session.id}" class="edit-topic" value="${escapeHTML(topicText)}" required placeholder="Tema de estudio" aria-label="Tema de estudio" />
+                    <input type="number" name="minutes" id="edit-minutes-${session.id}" class="edit-minutes" value="${session.minutes}" min="1" required placeholder="Minutos" aria-label="Minutos de estudio" />
+                    <div class="inline-edit-actions">
+                        <button type="submit" class="save-btn">Guardar</button>
+                        <button type="button" class="cancel-btn">Cancelar</button>
+                    </div>
+                </form>
+            `;
+
+            const topicInput = li.querySelector('.edit-topic');
+            if (topicInput) {
+                topicInput.focus();
+                topicInput.select();
+            }
+            return;
+        }
+
+        // Cancelar edición
+        const cancelBtn = e.target.closest('.cancel-btn');
+        if (cancelBtn) {
+            renderSessions();
+            return;
+        }
+    });
+
+    // Delegación de envío del formulario de edición en línea
+    sessionsContainer.addEventListener('submit', (e) => {
+        const form = e.target.closest('.inline-edit-form');
+        if (!form) return;
+
+        e.preventDefault();
+        const id = form.dataset.id;
+        const topicInput = form.querySelector('.edit-topic');
+        const minutesInput = form.querySelector('.edit-minutes');
+
+        if (!topicInput || !minutesInput) return;
+
+        const newTopic = topicInput.value.trim();
+        const newMinutes = parseInt(minutesInput.value, 10);
+
+        if (!newTopic) {
+            alert('El tema no puede estar vacío.');
+            topicInput.focus();
+            return;
+        }
+
+        if (isNaN(newMinutes) || newMinutes <= 0) {
+            alert('Los minutos deben ser un número entero mayor que 0.');
+            minutesInput.focus();
+            return;
+        }
+
+        const sessionIndex = sessions.findIndex(s => s.id === id);
+        if (sessionIndex !== -1) {
+            sessions[sessionIndex].topic = newTopic;
+            sessions[sessionIndex].minutes = newMinutes;
+            saveData();
+            updateUI();
+        }
+    });
+}
+
 // Arrancar
 init();
+
