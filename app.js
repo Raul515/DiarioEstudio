@@ -33,6 +33,20 @@ const STORAGE_KEY_GOAL = 'diario-estudio-meta-semanal';
 // Estado de la aplicación
 let sessions = [];
 let weeklyGoalMinutes = 300;
+var weeklyStatsOffset = 0;
+var monthlyStatsOffset = 0;
+
+// Elementos de los paneles de estadísticas por tema
+var weeklyTitle = document.getElementById('weekly-title');
+var weeklyTotal = document.getElementById('weekly-total');
+var weeklyList = document.getElementById('weekly-list');
+var weeklyPrev = document.getElementById('weekly-prev');
+var weeklyNext = document.getElementById('weekly-next');
+var monthlyTitle = document.getElementById('monthly-title');
+var monthlyTotal = document.getElementById('monthly-total');
+var monthlyList = document.getElementById('monthly-list');
+var monthlyPrev = document.getElementById('monthly-prev');
+var monthlyNext = document.getElementById('monthly-next');
 
 // Inicialización de la aplicación
 function init() {
@@ -48,6 +62,7 @@ function init() {
     setupHeatmapEvents();
     setupGoalEvents();
     setupSessionEvents();
+    setupTopicStatsEvents();
 
     // Renderizar la interfaz
     updateUI();
@@ -80,6 +95,7 @@ function updateUI() {
     renderStreaks();
     renderWeeklyGoal();
     renderHeatmap();
+    renderTopicStats();
 }
 
 // Renderizar el mapa de calor de 12 semanas
@@ -592,6 +608,76 @@ function setupSessionEvents() {
     });
 }
 
+// Renderizar ambos paneles de estadísticas por tema
+function renderTopicStats() {
+    if (typeof buildTopicRanking !== 'function') return;
+
+    var today = new Date();
+
+    // Panel semanal
+    var weekRange = getWeekRangeForOffset(today, weeklyStatsOffset);
+    if (weeklyTitle) weeklyTitle.textContent = weekRange.label;
+    var weekRanking = buildTopicRanking(sessions, weekRange.startStr, weekRange.endStr);
+    renderPanel(weeklyTotal, weeklyList, weekRanking, 'Sin sesiones esta semana');
+
+    // Panel mensual
+    var monthRange = getMonthRangeForOffset(today, monthlyStatsOffset);
+    if (monthlyTitle) monthlyTitle.textContent = monthRange.label;
+    var monthRanking = buildTopicRanking(sessions, monthRange.startStr, monthRange.endStr);
+    renderPanel(monthlyTotal, monthlyList, monthRanking, 'Sin sesiones este mes');
+}
+
+// Renderizar un panel individual (total + lista de temas)
+function renderPanel(totalEl, listEl, ranking, emptyMsg) {
+    if (!totalEl || !listEl) return;
+
+    if (ranking.topics.length === 0) {
+        totalEl.textContent = 'Total: 0 min';
+        listEl.innerHTML = '<div class="topic-stats-empty">' + emptyMsg + '</div>';
+        return;
+    }
+
+    totalEl.textContent = 'Total: ' + formatDuration(ranking.totalMinutes);
+
+    var html = '';
+    for (var i = 0; i < ranking.topics.length; i++) {
+        var t = ranking.topics[i];
+        html += '<div class="topic-stats-item">';
+        html += '<div class="topic-stats-name" title="' + escapeHTML(t.displayName) + '">' + escapeHTML(t.displayName) + '</div>';
+        html += '<div class="topic-stats-time">' + formatDuration(t.totalMinutes) + '</div>';
+        html += '<div class="topic-stats-bar-wrap"><div class="topic-stats-bar" style="width: ' + t.percentage + '%"></div></div>';
+        html += '</div>';
+    }
+    listEl.innerHTML = html;
+}
+
+// Configurar eventos de navegación de los paneles
+function setupTopicStatsEvents() {
+    if (weeklyPrev) {
+        weeklyPrev.addEventListener('click', function () {
+            weeklyStatsOffset--;
+            renderTopicStats();
+        });
+    }
+    if (weeklyNext) {
+        weeklyNext.addEventListener('click', function () {
+            weeklyStatsOffset++;
+            renderTopicStats();
+        });
+    }
+    if (monthlyPrev) {
+        monthlyPrev.addEventListener('click', function () {
+            monthlyStatsOffset--;
+            renderTopicStats();
+        });
+    }
+    if (monthlyNext) {
+        monthlyNext.addEventListener('click', function () {
+            monthlyStatsOffset++;
+            renderTopicStats();
+        });
+    }
+}
+
 // Arrancar
 init();
-
