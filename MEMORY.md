@@ -14,6 +14,8 @@ Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo qu
 - Subtemas: porcentaje calculado relativo al tiempo total del tema base (ej. 55m de 67m = 82%) para ver la distribución interna de la materia.
 - Sesiones mixtas (con y sin paréntesis): las sesiones sin paréntesis se listan bajo la etiqueta `General` para que la suma del desglose coincida al minuto.
 - Temas con <= 1 subtema: se muestran como filas estándar planas sin expander para no recargar la interfaz.
+- Ancho de página `max-width: 1140px`: aprovecha el espacio en pantallas grandes dando mayor holgura a las 3 columnas sin desbordamiento.
+- Prevención de scroll horizontal en paneles: `repeat(3, minmax(0, 1fr))` en la fila, `overflow-x: hidden` en la lista, eliminación de márgenes negativos en `summary` y `min-width: 0` en nombres de temas.
 - Normalización flexible (`normalizeTopic`) y Title Case (`toTitleCase` por palabras) preservados.
 
 ## Aprendizajes y errores a evitar
