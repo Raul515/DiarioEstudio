@@ -1,6 +1,6 @@
 # Tareas: Agrupación de Temas con Paréntesis y Expander de Subtemas (005-topic-subtopics-parentheses)
 
-- [ ] **Tarea 1 (Lógica y Tests)**: Implementar `parseTopic` y actualizar `buildTopicRanking` con soporte de subtemas en `topic-stats.js` junto a sus tests unitarios en `tests/topic-stats.test.js`.
+- [x] **Tarea 1 (Lógica y Tests)**: Implementar `parseTopic` y actualizar `buildTopicRanking` con soporte de subtemas en `topic-stats.js` junto a sus tests unitarios en `tests/topic-stats.test.js`.
   - Criterio de aceptación:
     - `parseTopic` separa adecuadamente base y subtema de paréntesis al final, maneja casos límite (vacío, solo paréntesis).
     - `buildTopicRanking` agrupa por tema base, calcula minutos totales y genera la lista `subtopics` ordenada con porcentajes relativos.

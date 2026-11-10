@@ -1,6 +1,7 @@
 var test = require('node:test');
 var assert = require('node:assert/strict');
 var {
+    parseTopic,
     normalizeTopic,
     toTitleCase,
     formatDuration,
@@ -8,6 +9,53 @@ var {
     getMonthRangeForOffset,
     buildTopicRanking
 } = require('../topic-stats.js');
+
+// --- parseTopic ---
+
+test('parseTopic - base topic and subtopic extraction', async function (t) {
+    await t.test('extracts base topic and subtopic from trailing parentheses', function () {
+        var parsed = parseTopic('Estudiar Teoria Sistemas Distribuidos (Tema 4)');
+        assert.equal(parsed.base, 'Estudiar Teoria Sistemas Distribuidos');
+        assert.equal(parsed.subtopic, 'Tema 4');
+    });
+
+    await t.test('handles subtopics with multiple words and conjunctions', function () {
+        var parsed = parseTopic('Estudiar Teoria Sistemas Distribuidos (Temas 3 y 5)');
+        assert.equal(parsed.base, 'Estudiar Teoria Sistemas Distribuidos');
+        assert.equal(parsed.subtopic, 'Temas 3 y 5');
+    });
+
+    await t.test('returns null subtopic when no parentheses present', function () {
+        var parsed = parseTopic('Ingles');
+        assert.equal(parsed.base, 'Ingles');
+        assert.equal(parsed.subtopic, null);
+    });
+
+    await t.test('trims extra whitespace around and inside parentheses', function () {
+        var parsed = parseTopic('   Tema Principal   (   Subtema 1   )   ');
+        assert.equal(parsed.base, 'Tema Principal');
+        assert.equal(parsed.subtopic, 'Subtema 1');
+    });
+
+    await t.test('handles only parentheses as base topic without subtopic', function () {
+        var parsed = parseTopic('(Tema 1)');
+        assert.equal(parsed.base, 'Tema 1');
+        assert.equal(parsed.subtopic, null);
+    });
+
+    await t.test('handles empty parentheses', function () {
+        var parsed = parseTopic('Tema Principal ()');
+        assert.equal(parsed.base, 'Tema Principal');
+        assert.equal(parsed.subtopic, null);
+    });
+
+    await t.test('handles empty and null inputs defensively', function () {
+        assert.deepEqual(parseTopic(''), { base: '', subtopic: null });
+        assert.deepEqual(parseTopic('   '), { base: '', subtopic: null });
+        assert.deepEqual(parseTopic(null), { base: '', subtopic: null });
+        assert.deepEqual(parseTopic(undefined), { base: '', subtopic: null });
+    });
+});
 
 // --- normalizeTopic ---
 
@@ -281,5 +329,90 @@ test('buildTopicRanking - topic grouping and ranking', async function (t) {
         var result = buildTopicRanking(sessions, '2026-10-19', '2026-10-25');
 
         assert.equal(result.totalMinutes, 30);
+    });
+
+    await t.test('groups sessions with parenthetical subtopics under base topic', function () {
+        var sessions = [
+            { date: '2026-11-10', topic: 'Estudiar Teoria Sistemas Distribuidos (Tema 4)', minutes: 12 },
+            { date: '2026-11-09', topic: 'Estudiar Teoria Sistemas Distribuidos (Temas 3 y 5)', minutes: 55 },
+            { date: '2026-11-09', topic: 'Ingles', minutes: 60 }
+        ];
+        var result = buildTopicRanking(sessions, '2026-11-09', '2026-11-15');
+
+        assert.equal(result.topics.length, 2);
+        assert.equal(result.totalMinutes, 127);
+
+        // Estudiar Teoria Sistemas Distribuidos has 67m (1st), Ingles has 60m (2nd)
+        var sdd = result.topics[0];
+        assert.equal(sdd.displayName, 'Estudiar Teoria Sistemas Distribuidos');
+        assert.equal(sdd.totalMinutes, 67);
+        assert.equal(sdd.subtopics.length, 2);
+
+        // Subtopics sorted descending by minutes
+        assert.equal(sdd.subtopics[0].displayName, 'Temas 3 y 5');
+        assert.equal(sdd.subtopics[0].totalMinutes, 55);
+        assert.equal(sdd.subtopics[0].percentage, 82); // 55 / 67 ≈ 82%
+
+        assert.equal(sdd.subtopics[1].displayName, 'Tema 4');
+        assert.equal(sdd.subtopics[1].totalMinutes, 12);
+        assert.equal(sdd.subtopics[1].percentage, 18); // 12 / 67 ≈ 18%
+
+        // Ingles has no subtopics
+        var eng = result.topics[1];
+        assert.equal(eng.displayName, 'Ingles');
+        assert.equal(eng.totalMinutes, 60);
+        assert.equal(eng.subtopics.length, 0);
+    });
+
+    await t.test('merges subtopics with different casing into the same subtopic', function () {
+        var sessions = [
+            { date: '2026-11-10', topic: 'Programación (tema 4)', minutes: 20 },
+            { date: '2026-11-10', topic: 'Programación (Tema 4)', minutes: 30 },
+            { date: '2026-11-10', topic: 'Programación (Tema 2)', minutes: 15 }
+        ];
+        var result = buildTopicRanking(sessions, '2026-11-09', '2026-11-15');
+
+        assert.equal(result.topics.length, 1);
+        var prog = result.topics[0];
+        assert.equal(prog.totalMinutes, 65);
+        assert.equal(prog.subtopics.length, 2);
+
+        assert.equal(prog.subtopics[0].displayName, 'Tema 4');
+        assert.equal(prog.subtopics[0].totalMinutes, 50);
+        assert.equal(prog.subtopics[1].displayName, 'Tema 2');
+        assert.equal(prog.subtopics[1].totalMinutes, 15);
+    });
+
+    await t.test('handles mixed sessions with and without parentheses as General', function () {
+        var sessions = [
+            { date: '2026-11-10', topic: 'Estudiar Teoria Sistemas Distribuidos (Tema 4)', minutes: 12 },
+            { date: '2026-11-10', topic: 'Estudiar Teoria Sistemas Distribuidos', minutes: 30 }
+        ];
+        var result = buildTopicRanking(sessions, '2026-11-09', '2026-11-15');
+
+        assert.equal(result.topics.length, 1);
+        var sdd = result.topics[0];
+        assert.equal(sdd.totalMinutes, 42);
+        assert.equal(sdd.subtopics.length, 2);
+
+        // General has 30m, Tema 4 has 12m
+        assert.equal(sdd.subtopics[0].displayName, 'General');
+        assert.equal(sdd.subtopics[0].totalMinutes, 30);
+        assert.equal(sdd.subtopics[1].displayName, 'Tema 4');
+        assert.equal(sdd.subtopics[1].totalMinutes, 12);
+    });
+
+    await t.test('topic with a single subtopic has subtopics array of length 1', function () {
+        var sessions = [
+            { date: '2026-11-10', topic: 'Física (Práctica 1)', minutes: 40 }
+        ];
+        var result = buildTopicRanking(sessions, '2026-11-09', '2026-11-15');
+
+        assert.equal(result.topics.length, 1);
+        var fis = result.topics[0];
+        assert.equal(fis.displayName, 'Física');
+        assert.equal(fis.totalMinutes, 40);
+        assert.equal(fis.subtopics.length, 1);
+        assert.equal(fis.subtopics[0].displayName, 'Práctica 1');
     });
 });

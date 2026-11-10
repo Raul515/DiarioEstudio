@@ -7,6 +7,50 @@ var SPANISH_MONTHS_TOPIC = [
 ];
 
 /**
+ * Extract base topic and subtopic from a raw topic string.
+ * Example: "Estudiar Teoria Sistemas Distribuidos (Tema 4)"
+ *   -> { base: "Estudiar Teoria Sistemas Distribuidos", subtopic: "Tema 4" }
+ * Example: "Ingles"
+ *   -> { base: "Ingles", subtopic: null }
+ * Example: "(Tema 1)"
+ *   -> { base: "Tema 1", subtopic: null }
+ * Example: "Tema ()"
+ *   -> { base: "Tema", subtopic: null }
+ */
+function parseTopic(rawTopic) {
+    if (typeof rawTopic !== 'string') {
+        return { base: '', subtopic: null };
+    }
+    var trimmed = rawTopic.trim();
+    if (!trimmed) {
+        return { base: '', subtopic: null };
+    }
+
+    var match = trimmed.match(/^(.*?)\s*\(([^)]*)\)\s*$/);
+    if (match) {
+        var basePart = match[1].trim();
+        var subtopicPart = match[2].trim();
+
+        // Edge case: only text inside parentheses e.g. "(Tema 1)"
+        if (!basePart && subtopicPart) {
+            return { base: subtopicPart, subtopic: null };
+        }
+
+        // Edge case: empty parentheses e.g. "Tema ()"
+        if (basePart && !subtopicPart) {
+            return { base: basePart, subtopic: null };
+        }
+
+        return {
+            base: basePart,
+            subtopic: subtopicPart || null
+        };
+    }
+
+    return { base: trimmed, subtopic: null };
+}
+
+/**
  * Normalize a topic name for grouping:
  * lowercase, no diacritics, hyphens → spaces, collapse whitespace
  */
@@ -124,15 +168,17 @@ function getMonthRangeForOffset(today, offset) {
 
 /**
  * Build the topic ranking for a date range.
- * Returns { topics: [{ displayName, totalMinutes, percentage }], totalMinutes }
+ * Groups by base topic (ignoring specifications in parentheses) and
+ * calculates subtopics breakdown if 2 or more distinct subtopics exist.
+ * Returns { topics: [{ displayName, totalMinutes, percentage, subtopics }], totalMinutes }
  */
 function buildTopicRanking(sessions, startStr, endStr) {
     if (!Array.isArray(sessions) || sessions.length === 0) {
         return { topics: [], totalMinutes: 0 };
     }
 
-    // Group minutes by normalized topic
-    var groups = {};       // normalizedKey → { totalMinutes, originalName }
+    // Group minutes by normalized base topic, tracking subtopics
+    var groups = {}; // baseKey → { totalMinutes, originalName, subtopicsMap }
     var totalMinutes = 0;
 
     for (var i = 0; i < sessions.length; i++) {
@@ -144,15 +190,34 @@ function buildTopicRanking(sessions, startStr, endStr) {
         if (isNaN(mins) || mins <= 0) continue;
 
         var topicName = session.topic || session.subject || '';
-        var key = normalizeTopic(topicName);
-        if (key === '') continue;
+        var parsed = parseTopic(topicName);
+        var baseKey = normalizeTopic(parsed.base);
+        if (baseKey === '') continue;
 
         totalMinutes += mins;
 
-        if (!groups[key]) {
-            groups[key] = { totalMinutes: 0, originalName: topicName };
+        if (!groups[baseKey]) {
+            groups[baseKey] = {
+                totalMinutes: 0,
+                originalName: parsed.base,
+                subtopicsMap: {}
+            };
         }
-        groups[key].totalMinutes += mins;
+        groups[baseKey].totalMinutes += mins;
+
+        // Subtopic grouping
+        var subKey = parsed.subtopic ? normalizeTopic(parsed.subtopic) : '__general__';
+        var rawSubName = parsed.subtopic ? parsed.subtopic : 'General';
+
+        if (!groups[baseKey].subtopicsMap[subKey]) {
+            // Capitalize first character of display name
+            var cleanSubName = rawSubName.charAt(0).toUpperCase() + rawSubName.slice(1);
+            groups[baseKey].subtopicsMap[subKey] = {
+                totalMinutes: 0,
+                displayName: cleanSubName
+            };
+        }
+        groups[baseKey].subtopicsMap[subKey].totalMinutes += mins;
     }
 
     // Build sorted array
@@ -164,10 +229,35 @@ function buildTopicRanking(sessions, startStr, endStr) {
         var percentage = totalMinutes > 0
             ? Math.round((group.totalMinutes / totalMinutes) * 100)
             : 0;
+
+        // Build subtopics array
+        var subKeys = Object.keys(group.subtopicsMap);
+        var subtopics = [];
+
+        // If the only subtopic is '__general__', there were no parentheses at all
+        var hasOnlyGeneral = subKeys.length === 1 && subKeys[0] === '__general__';
+        if (!hasOnlyGeneral && subKeys.length > 0) {
+            for (var s = 0; s < subKeys.length; s++) {
+                var sk = subKeys[s];
+                var sub = group.subtopicsMap[sk];
+                var subPercentage = group.totalMinutes > 0
+                    ? Math.round((sub.totalMinutes / group.totalMinutes) * 100)
+                    : 0;
+                subtopics.push({
+                    displayName: sub.displayName,
+                    totalMinutes: sub.totalMinutes,
+                    percentage: subPercentage
+                });
+            }
+            // Sort subtopics descending by totalMinutes
+            subtopics.sort(function (a, b) { return b.totalMinutes - a.totalMinutes; });
+        }
+
         topics.push({
             displayName: toTitleCase(group.originalName),
             totalMinutes: group.totalMinutes,
-            percentage: percentage
+            percentage: percentage,
+            subtopics: subtopics
         });
     }
 
@@ -180,6 +270,7 @@ function buildTopicRanking(sessions, startStr, endStr) {
 // Conditional export for Node.js tests (Constitution rule 4)
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
+        parseTopic: parseTopic,
         normalizeTopic: normalizeTopic,
         toTitleCase: toTitleCase,
         formatDuration: formatDuration,
