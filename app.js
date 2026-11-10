@@ -642,11 +642,41 @@ function renderPanel(totalEl, listEl, ranking, emptyMsg) {
     var html = '';
     for (var i = 0; i < ranking.topics.length; i++) {
         var t = ranking.topics[i];
-        html += '<div class="topic-stats-item">';
-        html += '<div class="topic-stats-name" title="' + escapeHTML(t.displayName) + '">' + escapeHTML(t.displayName) + '</div>';
-        html += '<div class="topic-stats-time">' + formatDuration(t.totalMinutes) + '</div>';
-        html += '<div class="topic-stats-bar-wrap"><div class="topic-stats-bar" style="width: ' + t.percentage + '%"></div></div>';
-        html += '</div>';
+        var hasSubtopics = Array.isArray(t.subtopics) && t.subtopics.length > 1;
+
+        if (hasSubtopics) {
+            html += '<details class="topic-stats-item topic-stats-expandable">';
+            html += '<summary class="topic-stats-summary">';
+            html += '<div class="topic-stats-name" title="' + escapeHTML(t.displayName) + '">';
+            html += '<span class="topic-expander-icon" aria-hidden="true">▸</span>';
+            html += escapeHTML(t.displayName);
+            html += '<span class="topic-subtopics-badge" title="' + t.subtopics.length + ' subtemas">' + t.subtopics.length + '</span>';
+            html += '</div>';
+            html += '<div class="topic-stats-time">' + formatDuration(t.totalMinutes) + '</div>';
+            html += '<div class="topic-stats-bar-wrap"><div class="topic-stats-bar" style="width: ' + t.percentage + '%"></div></div>';
+            html += '</summary>';
+
+            html += '<div class="topic-subtopics-list">';
+            for (var s = 0; s < t.subtopics.length; s++) {
+                var sub = t.subtopics[s];
+                html += '<div class="topic-subtopic-item">';
+                html += '<div class="topic-subtopic-name" title="' + escapeHTML(sub.displayName) + '">';
+                html += '<span class="topic-subtopic-bullet" aria-hidden="true">•</span>';
+                html += escapeHTML(sub.displayName);
+                html += '</div>';
+                html += '<div class="topic-subtopic-time">' + formatDuration(sub.totalMinutes) + '</div>';
+                html += '<div class="topic-subtopic-bar-wrap"><div class="topic-subtopic-bar" style="width: ' + sub.percentage + '%"></div></div>';
+                html += '</div>';
+            }
+            html += '</div>';
+            html += '</details>';
+        } else {
+            html += '<div class="topic-stats-item">';
+            html += '<div class="topic-stats-name" title="' + escapeHTML(t.displayName) + '">' + escapeHTML(t.displayName) + '</div>';
+            html += '<div class="topic-stats-time">' + formatDuration(t.totalMinutes) + '</div>';
+            html += '<div class="topic-stats-bar-wrap"><div class="topic-stats-bar" style="width: ' + t.percentage + '%"></div></div>';
+            html += '</div>';
+        }
     }
     listEl.innerHTML = html;
 }
