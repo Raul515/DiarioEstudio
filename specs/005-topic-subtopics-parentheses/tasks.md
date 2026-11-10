@@ -21,7 +21,7 @@
     - Se ve correctamente en móvil (375px) sin desbordamientos.
   - Commit: `style: estilos para expander de subtemas y mini barras en paneles de estadisticas`
 
-- [ ] **Tarea 4 (Verificación y Memoria)**: Verificar visualmente en navegador con Chrome DevTools MCP en escritorio y móvil, comprobar consola limpia y actualizar `MEMORY.md`.
+- [x] **Tarea 4 (Verificación y Memoria)**: Verificar visualmente en navegador con Chrome DevTools MCP en escritorio y móvil, comprobar consola limpia y actualizar `MEMORY.md`.
   - Criterio de aceptación:
     - Verificación con sesiones de prueba (incluyendo los casos de las capturas).
     - Cero errores en consola.

@@ -2,25 +2,25 @@
 Memoria del proyecto entre sesiones. Máximo ~50 líneas: resume o elimina lo que ya no aporte.
 
 ## Estado actual
-- v1.6 funcionando: Estadísticas de tiempo por tema agrupadas por mes y semana con navegación temporal (`specs/004-topic-time-stats/`).
-- Disposición en 3 columnas en escritorio (Panel mensual | Objetivo semanal | Panel semanal) y responsive apilado en móvil.
+- v1.7 funcionando: Agrupación de temas por nombre base ignorando especificaciones en paréntesis y expander interactivo de subtemas para paneles semanal y mensual (`specs/005-topic-subtopics-parentheses/`).
+- Paneles semanal y mensual en 3 columnas junto al objetivo semanal y mapa de calor de 12 semanas.
 - Edición y eliminación de sesiones pasadas con formulario en línea (`specs/003-edit-delete-sessions/`).
-- Objetivo semanal de estudio con barra de progreso y edición (`specs/002-weekly-goal/`).
-- Mapa de calor de 12 semanas (lunes a domingo, 5 intensidades).
 - Métricas triples de racha (actual, mejor, este mes) y registro de sesiones en localStorage.
-- 70 tests unitarios nativos pasando en verde con `node --test` (42 en `topic-stats.test.js`, 15 en `goal.test.js`, 13 en `heatmap.test.js`).
+- 82 tests unitarios nativos pasando en verde con `node --test` (54 en `topic-stats.test.js`, 15 en `goal.test.js`, 13 en `heatmap.test.js`).
 
 ## Decisiones (y por qué)
-- Normalización flexible de temas (`normalizeTopic`): convierte a minúsculas, remueve diacríticos (`NFD`), reemplaza guiones por espacios y colapsa espacios. Permite agrupar "Inglés", "ingles", "INGLÉS" o variantes con guiones en un único concepto.
-- Formato de visualización con `toTitleCase`: divide por espacios para no tratar letras acentuadas tras diacríticos como límites de palabra (`\b\w` en regex falla con Unicode).
-- Layout de 3 columnas en `stats-row` con `max-width: 960px` en `body`: integra armoniosamente el objetivo semanal y los dos paneles de estadísticas.
-- Scroll interno en la lista de temas (`max-height: 220px` y `overflow-y: auto`) para mantener la tarjeta compacta independientemente del número de temas.
+- Extracción de tema base y subtema con `parseTopic`: regex `/^(.*?)\s*\(([^)]*)\)\s*$/`. Agrupa "Estudiar Teoria Sistemas Distribuidos (Tema 4)" y "(Temas 3 y 5)" bajo el mismo concepto sin alterar `localStorage`.
+- Componente `<details>` / `<summary>` para el expander: solución nativa HTML5, cero listeners JS para el toggle, accesible con teclado (`Enter`/`Espacio`) y lectores de pantalla.
+- Subtemas: porcentaje calculado relativo al tiempo total del tema base (ej. 55m de 67m = 82%) para ver la distribución interna de la materia.
+- Sesiones mixtas (con y sin paréntesis): las sesiones sin paréntesis se listan bajo la etiqueta `General` para que la suma del desglose coincida al minuto.
+- Temas con <= 1 subtema: se muestran como filas estándar planas sin expander para no recargar la interfaz.
+- Normalización flexible (`normalizeTopic`) y Title Case (`toTitleCase` por palabras) preservados.
 
 ## Aprendizajes y errores a evitar
-- Unicode en `toTitleCase`: nunca usar `\b\w` con regex simple para mayúsculas porque considera caracteres acentuados como `é` fuera del límite de palabra (ej. `IngléS`).
+- Separación de `summary` y `div` en CSS: aplicar `display: grid` al `summary` y dejar `details` como `display: block` para evitar que el navegador distorsione la lista expandida.
 - Fechas locales estrictas: cálculo de semanas lunes a domingo usando fechas locales con mediodía (`12:00`) para evitar desfases de DST.
 - Viewport en MCP: verificar responsividad probando explícitamente en escritorio (≥960px) y móvil (375px).
 
 ## Próximos pasos y notas técnicas
-- Funcionalidad verificada con Chrome DevTools MCP en escritorio y móvil (375px) sin errores de consola.
-- Todas las tareas de `specs/004-topic-time-stats/tasks.md` completadas.
+- Funcionalidad verificada con Chrome DevTools MCP en escritorio y móvil (375px) con consola 100% limpia.
+- Todas las tareas de `specs/005-topic-subtopics-parentheses/tasks.md` completadas.
